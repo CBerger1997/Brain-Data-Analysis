@@ -2,7 +2,7 @@
 % Continue from your preprocessed data
 
 %% OPTION 1: TRADITIONAL BLOCK AVERAGING
-% This does actual trial averaging (preserves temporal dynamics)
+% This does trial averaging
 
 % Run the block averaging
 pre_stim = 5;  % seconds before stimulus
@@ -12,11 +12,11 @@ baa_results = perform_block_averaging(preprocessed, pre_stim, post_stim);
 %% VISUALIZATION OF BAA RESULTS
 % Plot averaged responses for each condition
 
-% Select a subject to visualize (e.g., subject 1)
+% Select a subject to visualize
 subj_idx = 2;
 subj_data = baa_results(subj_idx);
 
-% Select a channel to plot (e.g., channel 1)
+% Select a channel to plot
 channel_idx = 15;
 
 % Check data dimensions first
@@ -53,7 +53,7 @@ for scene_idx = 1:length(scenes)
             % Extract data for this condition and channel
             condition_data = subj_data.data(:, channel_idx, cond_data_idx);
             
-            % Debug: check dimensions
+            % check dimensions
             fprintf('Condition %s: time=%d, data=%d\n', cond_name, length(subj_data.time), length(condition_data));
             
             % Ensure vectors are the same length
@@ -87,7 +87,7 @@ sgtitle(sprintf('Block Averaged Responses - Subject %s', subj_data.demographics(
 scenes = {'Refugee', 'Camp', 'Plants', 'Raid', 'Processing', 'Supper'};
 conds  = {'LF', 'HF', 'A'};
 
-% Step 1: Initialize
+% Initialize
 comparison_results = struct();
 for s = 1:length(scenes)
     for c = 1:length(conds)
@@ -97,7 +97,7 @@ for s = 1:length(scenes)
     end
 end
 
-% Step 2: Populate from BAA
+% Populate from BAA
 for subj_idx = 1:length(baa_results)
     subj_data = baa_results(subj_idx);
     subj_id = subj_data.demographics('subject');  % dictionary access
@@ -111,10 +111,10 @@ for subj_idx = 1:length(baa_results)
         % Get data for this condition: time x channels
         cond_data = squeeze(data(:,:,cond_idx));
 
-        % Peak extraction: max HbO (channel-wise average)
+        % Peak extraction: max HbO
         % You can choose to average channels first or extract per ROI
-        hbo_data = cond_data(:,15);  % assuming HbO = odd channels (typical)
-        mean_hbo = mean(hbo_data, 2);     % average across HbO channels
+        hbo_data = cond_data(:,15);    % HbO = odd channels
+        mean_hbo = mean(hbo_data, 2);    % average across HbO channels
 
         peak_val = max(mean_hbo);
           
@@ -196,7 +196,7 @@ end
 
 %%
 
-% Step 1: Load subjective ratings CSV
+% Load subjective ratings CSV
 ratings = readtable('Participant Ratings (APFE).csv');
 
 % Rename columns manually
@@ -211,7 +211,7 @@ signal_types = {'hbo', 'hbr'};
 metric_type = 'peak'
 signal_type = 'hbo'
 
-% Step 2: Match ratings with baa_results and extract AUC
+% Match ratings with baa_results and extract AUC
 results = [];
 
 for subj_idx = 1:length(baa_results)
@@ -248,26 +248,19 @@ for subj_idx = 1:length(baa_results)
             temp.scene = scene;
             temp.condition = cond_name;
             temp.auc = val;
-            temp.involved = ratings.Involved(row_idx(1));   % ensure scalar
-            temp.immersed = ratings.Immersed(row_idx(1));   % ensure scalar
-            temp.fear = ratings.Fear(row_idx(1));           % ensure scalar
+            temp.involved = ratings.Involved(row_idx(1));
+            temp.immersed = ratings.Immersed(row_idx(1));
+            temp.fear = ratings.Fear(row_idx(1));
             
             results = [results; temp];  % append to results array
         end
     end
 end
 
-% Now convert to table
+% Convert to table
 results_tbl = struct2table(results);
 
-% Assumes `results_tbl` contains the following columns:
-% - condition (e.g., 'Refugee_LF')
-% - auc
-% - fear
-% - immersed
-% - involved
-
-% Step 1: Initialize
+% Initialize
 sceneconds = unique(results_tbl.condition);
 summary = struct();
 
@@ -277,7 +270,7 @@ fprintf('%-18s | %-5s | %-7s | %-7s | %-7s | %-7s | %-7s | %-7s\n', ...
     'Condition', 'n', 'Fear_r', 'Fear_p', 'Imm_r', 'Imm_p', 'Invol_r');
 fprintf('%s\n', repmat('-',1,90));
 
-% Step 2: Loop through each condition
+% Loop through each condition
 for i = 1:length(sceneconds)
     sc = sceneconds{i};
     idx = strcmp(results_tbl.condition, sc);
@@ -310,7 +303,7 @@ for i = 1:length(sceneconds)
     summary(i).p_invol = p_inv;
 end
 
-% Step 3: Export to CSV (optional)
+% Export to CSV
 summary_tbl = struct2table(summary);
 
 filename = sprintf('results_%s_%s.csv', lower(metric_type), lower(signal_type));
