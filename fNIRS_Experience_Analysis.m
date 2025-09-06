@@ -8,12 +8,12 @@ root_dir = uigetdir (pwd, 'select folder');
 raw = nirs.io.loadDirectory((root_dir), {'subject'});
 
 for i = 1:length(raw)
-    [~, name, ~] = fileparts(raw(i).description);  % e.g. "P10"
-    raw(i).demographics('subject') = upper(strtrim(name));  % Set as 'P10'
+    [~, name, ~] = fileparts(raw(i).description);  % extract name from full path
+    raw(i).demographics('subject') = upper(strtrim(name));  % Set subject name
 end
 
 %%
-% we can look at stimili (for example triggers)
+% Look at stimili
 raw=nirs.viz.StimUtil(raw);
 raw.draw;
 
@@ -23,9 +23,9 @@ job= nirs.modules.RenameStims();
 job.listOfChanges = {
      'v' 'V'
      };
-% the label "fix" will be changed to "F" and the label "e" will be changed to "E"
+% set labels for continuity
 
-% we can discard events that we do not need 
+% discard events that we do not need
 job = nirs.modules.DiscardStims (job);
 job.listOfStims = {'R', 'G', 'J', 'B', 'C'};
 
@@ -36,7 +36,7 @@ job= nirs.modules.RenameStims();
 job.listOfChanges = {
      'V' 'Video'
      };
-% the label "fix" will be changed to "F" and the label "e" will be changed to "E"
+% set labels to their condition name, here we only need video as rest is not required
 
 raw = job.run(raw);
 
@@ -49,7 +49,7 @@ map = readtable('condition_mapping.csv');  % Columns: Participant, Condition
 for i = 1:length(raw)
     sub = raw(i);
     
-    % Get subject ID (make sure it's like 'P10', 'P11', etc.)
+    % Get subject ID
     pid = sub.demographics('subject');  % adjust key name if needed
     
     % Extract conditions for this participant
@@ -113,7 +113,7 @@ sceneDurations = [249, 242, 298, 469, 189, 142];  % Refugee to Supper
 for i = 1:length(raw)
     sub = raw(i);
     
-    % Collect all C1, C2, C3 stim events together
+    % Collect all stim events together
     allEvents = struct('label', {}, 'onset', {}, 'idx', {});
     
     for label = ["Refugee_LF", "Refugee_HF", "Refugee_A", "Camp_LF", "Camp_HF", "Camp_A", "Plants_LF", "Plants_HF", "Plants_A", "Raid_LF", "Raid_HF", "Raid_A", "Processing_LF", "Processing_HF", "Processing_A", "Supper_LF", "Supper_HF", "Supper_A"]
@@ -172,7 +172,7 @@ for i = 1:length(raw)
     job = nirs.modules.BeerLambertLaw();
     r = job.run(r);
 
-    % Optional: save preprocessed per-subject
+    % save preprocessed per-subject
     preprocessed(i) = r;
 
 end
