@@ -8,12 +8,12 @@ root_dir = uigetdir (pwd, 'select folder');
 raw = nirs.io.loadDirectory((root_dir), {'subject'});
 
 for i = 1:length(raw)
-    [~, name, ~] = fileparts(raw(i).description);  % Extract 'P10' from full path
-    raw(i).demographics('subject') = name;         % Set subject = 'P10'
+    [~, name, ~] = fileparts(raw(i).description);  % Extract name from full path
+    raw(i).demographics('subject') = name;         % Set subject name
 end
 
 %%
-% we can look at stimili (for example triggers)
+% we look at the stimuli
 raw=nirs.viz.StimUtil(raw);
 raw.draw;
 
@@ -27,9 +27,9 @@ job.listOfChanges = {
      'b' 'B'
      'c' 'C'
      };
-% the label "fix" will be changed to "F" and the label "e" will be changed to "E"
+% changes labels to ensure consistency across participants
 
-% we can discard events that we do not need 
+% Discard labels that we do not need
 job = nirs.modules.DiscardStims (job);
 job.listOfStims = {'video', 'I', 'P', 'stim_aux1'};
 
@@ -45,32 +45,9 @@ job.listOfChanges = {
      'R' 'Rest'
      'V' 'Video'
      };
-% the label "fix" will be changed to "F" and the label "e" will be changed to "E"
+% change labels now to their relevant video or condition name
 
 raw = job.run(raw);
-
-%% SPLIT DATA INTO SECTIONS
-% Choose which section to analyze
-section_choice = 'calibration'; % Change to 'experience' as needed
-
-% Split the data
-[split_raw, section_info] = split_nirs_data(raw, section_choice);
-
-% Display information about the split
-fprintf('\n=== DATA SPLIT SUMMARY ===\n');
-if iscell(section_info)
-    % Multiple subjects
-    for i = 1:length(section_info)
-        fprintf('Subject %d - %s section:\n', i, section_info{i}.section);
-        fprintf('  Duration: %.1f seconds\n', section_info{i}.split_duration);
-        fprintf('  Events: %d\n', section_info{i}.events_included);
-    end
-else
-    % Single subject
-    fprintf('Section: %s\n', section_info.section);
-    fprintf('Duration: %.1f seconds\n', section_info.split_duration);
-    fprintf('Events: %d\n', section_info.events_included);
-end
 
 %% SPLIT DATA INTO SECTIONS
 % Choose which section to analyze
@@ -96,17 +73,11 @@ else
 end
 
 %% CONTINUE WITH STANDARD PREPROCESSING
-% Now use split_raw instead of raw for the rest of your analysis
+% Use split_raw for the rest of the analysis
 raw = split_raw;
 
-% Continue with your standard preprocessing steps...
-% For example:
-% data = nirs.modules.OpticalDensity().run(data);
-% data = nirs.modules.BeerLambertLaw().run(data);
-% etc.
-
 %%
-% to change stimuli duration 
+% change stimuli duration 
 raw=nirs.design.change_stimulus_duration(raw, {} ,30);
 
 %%
@@ -117,8 +88,7 @@ j = nirs.modules.ChangeStimulusInfo();
 j.ChangeTable = tbl;
 raw = j.run(raw);
 %%
-% trim baseline (5 sec before first stim onsel and 5 sec after the last
-% one)
+% trim baseline (5 sec before first stim onset and 5 sec after the last one)
 job = nirs.modules.TrimBaseline(job);
 job.preBaseline = 5;
 job.postBaseline = 5;
@@ -154,7 +124,7 @@ save participant_raw;
 job1 = nirs.modules.GLM();
 job1. type = 'AR-IRLS';
 basis=nirs.design.basis.BoxCar;
-% the choice of hemodynamic funcion depend on the study design and population
+% The choice of hemodynamic function depends on the study design and population
 job1.AddShortSepRegressors = true;
 SubjStats = job1.run(participant_raw);
 save SubjStats;
@@ -163,8 +133,7 @@ save SubjStats;
 
 job2=nirs.modules.MixedEffects();
 job2.formula='beta ~ -1 + cond + (1|subject)';
-%the formula depeends on the study design
-% available Matlab documentaion on how specify the formula - https://www.mathworks.com/help/stats/fitlme.html#btyabbf
+% The formula depends on the study design, available Matlab documentation on how to specify the formula - https://www.mathworks.com/help/stats/fitlme.html#btyabbf
 GroupStats=job2.run(SubjStats);
 %change q and p, increase q < 0.07
 GroupStats.draw('beta',[],'q < 0.05');
@@ -175,8 +144,7 @@ nirs.viz.nirsviewer(SubjStats);
 
 %% 3rd level contrast analysis will test for differences between conditions
 
-% the difference between the first and second condition
-% must sum up to 0
+% the difference between the first and second condition must sum up to 0
 
 GroupStats.conditions
 
@@ -237,7 +205,7 @@ for i = 1:size(contrastVectors,1)
     fprintf('%s: %d significant channels at q<0.05, %d at q<0.10\n', ...
         name, nSig_q05, nSig_q10);
     
-    % Save table of significant channels (optional)
+    % Save table of significant channels
     rows = C.q < 0.05;
     T = C.table;            % Store the table in a variable
     sigTable = T(rows, :);  % Index into the variable, not into C.table directly
@@ -257,9 +225,9 @@ for i = 1:size(contrastVectors,1)
 end
 
 %%
-T = ContrastGRvsR.table;  % Your results table
+T = ContrastGRvsR.table;  % The results table
 
-% Find the row(s) for source 8 and detector 2
+% Find the row for source 8 and detector 2 which is what we are interested in
 idx = (T.source == 8) & (T.detector == 2);
 
 disp("Girl Running Vs Rest");
@@ -273,7 +241,7 @@ end
 
 T = ContrastJSvsR.table;  % Your results table
 
-% Find the row(s) for source 8 and detector 2
+% Find the row for source 8 and detector 2
 idx = (T.source == 8) & (T.detector == 2);
 
 disp("Jump Scare Vs Rest");
@@ -285,14 +253,14 @@ else
     disp('No data found for source 8 and detector 2.');
 end
 
-% Example using NIRS Toolbox visualization:
+% NIRS Toolbox visualization:
 fig = figure;
 GroupStats.draw('beta',[], 'q < 0.05');  % This plots significant betas
 title('Significant HbO Changes (Beta) - Jump Scare vs Rest');
 
 T = ContrastCSvsR.table;  % Your results table
 
-% Find the row(s) for source 8 and detector 2
+% Find the row for source 8 and detector 2
 idx = (T.source == 8) & (T.detector == 2);
 
 disp("Chainsaw Vs Rest");
@@ -306,7 +274,7 @@ end
 
 T = ContrastBRvsR.table;  % Your results table
 
-% Find the row(s) for source 8 and detector 2
+% Find the row for source 8 and detector 2
 idx = (T.source == 8) & (T.detector == 2);
 
 disp("Bedroom Vs Rest");
@@ -338,14 +306,14 @@ for i = 1:length(uniqueSubjects)
 end
 
 for i = 1:numSubjects
-    % Get subject name from fNIRS file (e.g., 'P10')
+    % Get subject name from fNIRS file
     subjectName = SubjStats(i).demographics('subject');
     
-    % Extract numeric part (e.g., '10')
+    % Extract numeric part
     subjIDstr = regexp(subjectName, '\d+', 'match');
     subjID = str2double(subjIDstr{1});
     
-    % Find matching row in your ratings table
+    % Find matching row in the ratings table
     row = jsRatings.Participant == subjID;
     
     if any(row)
@@ -498,14 +466,14 @@ function [split_data, section_info] = split_nirs_data(data, section_choice)
 %   section_choice - 'calibration' or 'experience'
 %
 % Outputs:
-%   split_data - NIRS data object(s) containing only the selected section
+%   split_data - NIRS data object containing only the selected section
 %   section_info - struct with information about the split
 
     if nargin < 2
         section_choice = 'calibration'; % default
     end
     
-    % Handle array of data objects (from loadDirectory)
+    % Handle array of data objects
     if length(data) > 1
         split_data = nirs.core.Data.empty();
         section_info = {};
@@ -551,7 +519,7 @@ function [split_data, section_info] = split_single_subject(data, section_choice)
     % Determine time boundaries
     if strcmp(section_choice, 'calibration')
         time_start = 0;
-        % Add 60 seconds (1 minute) after the last calibration event
+        % Add 60 seconds after the last calibration event
         time_end = all_events(split_point).onset + all_events(split_point).dur + 60;
         events_to_keep = all_events(1:split_point);
         fprintf('Extracting CALIBRATION section: 0 to %.1f seconds (includes 60s buffer)\n', time_end);
